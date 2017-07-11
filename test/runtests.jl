@@ -1,4 +1,4 @@
-using Base.Test, Rayden
+using Base.Test, RayTraceEllipsoid
 
 r = Ray()
 @test r.dir == Vec(1,0,0)
