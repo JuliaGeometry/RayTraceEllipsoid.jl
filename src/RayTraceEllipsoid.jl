@@ -47,14 +47,14 @@ struct Ellipsoid
     open::Float64 # cos(α), where α is half the opening angle of the dome
     # all of the following are transformations
     center::Translation{Vec} # translate the ellipsoid to zero
-    scale::LinearMap{SArray{Tuple{3,3},Float64,2,9}} # scale the ellipsoid to a unit sphere
-    center_scale::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}} # translate and scale to a unit-sphere
+    scale::LinearMap{SDiagonal{3,Float64}}
+    center_scale::AffineMap{SDiagonal{3,Float64},Vec} # translate and scale to a unit-sphere
     uncenter::Translation{Vec}
-    unscale::LinearMap{SArray{Tuple{3,3},Float64,2,9}}
-    uncenter_unscale::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}}
+    unscale::LinearMap{SDiagonal{3,Float64}}
+    uncenter_unscale::AffineMap{SDiagonal{3,Float64},Vec}
     function Ellipsoid(c::Vec, r::Vec, dir::Vec, open)
         uncenter = Translation(c)
-        unscale = LinearMap(@SMatrix([r[1] 0 0; 0 r[2] 0; 0 0 r[3]])) # fix with Diagonal
+        unscale = LinearMap(SDiagonal(r))
         center = inv(uncenter)
         scale = inv(unscale)
         center_scale = scale∘center
