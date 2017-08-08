@@ -9,6 +9,5 @@ These ellipsoid-domes are defined with `Ellipsoid` (see details with `help?> Ell
 `Ray`s `advance!` to intersect with the `Ellipsoid`s and `bend!` at the `Interface`s. The `raytrace!` function includes these two actions, taking in a `Ray` and an `OpticUnit`, updating the location and direction of the ray.
 
 ## Todo
-- add the `UnitfulAngles.jl` package to improve how users input cos(α)
 - add rotated ellipsoids
 - add more shapes, so it's not only `RayTrace**Ellipsoid**`
