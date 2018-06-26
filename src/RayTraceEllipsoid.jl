@@ -2,7 +2,7 @@ __precompile__()
 
 module RayTraceEllipsoid
 
-using CoordinateTransformations, StaticArrays
+using CoordinateTransformations, StaticArrays, UnitfulAngles
 
 export Vec, Ray, Ellipsoid, Interface, OpticUnit, raytrace!, advance!, bend!
 
@@ -29,7 +29,7 @@ Ray() = Ray(Vec(0,0,0), Vec(1,0,0))
 """
     Ellipsoid(c::Vec, r::Vec, dir::Vec, open::Float64)
 
-An ellipsoid with a center, `c`, and radii, `r`, as well as a direction, `dir`, (gets automatically normalized) and an opening angle, `open`, creating a dome (or window), that the ellipsoid is defined in. Note that `open` must be given as cos(α), where α is the opening angle. 
+    An ellipsoid with a center, `c`, and radii, `r`, as well as a direction (gets automatically normalized), `dir`, and an opening angle, `open`, creating a dome (or window), that the ellipsoid is defined in. Note that `open` is the angle between the dome's edge and the direction of the dome (so actually half the opening angle) and is defined in **some angular units** (using UnitfulAngles, for example: u"°").
 
 `Ellipsoid` has 6 additional fields all relating to various spatial transformations that convert the ellipsoid to a unit-sphere and back again. These are all `CoordinateTransformations`.
 
@@ -47,19 +47,19 @@ struct Ellipsoid
     open::Float64 # cos(α), where α is half the opening angle of the dome
     # all of the following are transformations
     center::Translation{Vec} # translate the ellipsoid to zero
-    scale::LinearMap{SArray{Tuple{3,3},Float64,2,9}} # scale the ellipsoid to a unit sphere
-    center_scale::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}} # translate and scale to a unit-sphere
+    scale::LinearMap{SDiagonal{3,Float64}}
+    center_scale::AffineMap{SDiagonal{3,Float64},Vec} # translate and scale to a unit-sphere
     uncenter::Translation{Vec}
-    unscale::LinearMap{SArray{Tuple{3,3},Float64,2,9}}
-    uncenter_unscale::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}}
-    function Ellipsoid(c::Vec, r::Vec, dir::Vec, open::Float64)
+    unscale::LinearMap{SDiagonal{3,Float64}}
+    uncenter_unscale::AffineMap{SDiagonal{3,Float64},Vec}
+    function Ellipsoid(c::Vec, r::Vec, dir::Vec, open)
         uncenter = Translation(c)
-        unscale = LinearMap(@SMatrix([r[1] 0 0; 0 r[2] 0; 0 0 r[3]])) # fix with Diagonal
+        unscale = LinearMap(SDiagonal(r))
         center = inv(uncenter)
         scale = inv(unscale)
         center_scale = scale∘center
         uncenter_unscale = inv(center_scale)
-        new(c, r, normalize(dir), open, center, scale, center_scale, uncenter, unscale, uncenter_unscale)
+        new(c, r, normalize(dir), cos(open), center, scale, center_scale, uncenter, unscale, uncenter_unscale)
     end
 end
 
