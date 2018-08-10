@@ -1,5 +1,3 @@
-__precompile__()
-
 module RayTraceEllipsoid
 
 using CoordinateTransformations, StaticArrays, UnitfulAngles
