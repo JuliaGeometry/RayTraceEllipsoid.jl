@@ -1,8 +1,7 @@
-__precompile__()
-
 module RayTraceEllipsoid
 
-using CoordinateTransformations, StaticArrays, UnitfulAngles, LinearAlgebra
+using CoordinateTransformations, StaticArrays, UnitfulAngles
+import LinearAlgebra: normalize, ⋅
 
 export Vec, Ray, Ellipsoid, Interface, OpticUnit, raytrace!, advance!, bend!
 
