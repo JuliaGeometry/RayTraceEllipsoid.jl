@@ -51,14 +51,14 @@ struct Ellipsoid
     uncenter::Translation{Vec}
     unscale::LinearMap{SDiagonal{3,Float64}}
     uncenter_unscale::AffineMap{SDiagonal{3,Float64},Vec}
-    function Ellipsoid(c::Vec, r::Vec, dir::Vec, open)
+    function Ellipsoid(c::Vec, r::Vec, dir::Vec, α)
         uncenter = Translation(c)
         unscale = LinearMap(SDiagonal(r))
         center = inv(uncenter)
         scale = inv(unscale)
         center_scale = scale∘center
         uncenter_unscale = inv(center_scale)
-        new(c, r, normalize(dir), cos(open), center, scale, center_scale, uncenter, unscale, uncenter_unscale)
+        new(c, r, normalize(dir), cos(α), center, scale, center_scale, uncenter, unscale, uncenter_unscale)
     end
 end
 
@@ -67,13 +67,13 @@ end
 
 Return the two distances between a point with origin, `orig`, and direction, `dir`, and the two (potentially identical) intersection points with a unit-sphere. 
 """
-function distance(orig::Vec, dir::Vec)::Tuple{Float64, Float64}
+function distance(orig::Vec, dir::Vec)
     b = -orig⋅dir
     disc = b^2 - orig⋅orig + 1
-    if disc >= 0
+    if disc ≥ 0
         d = sqrt(disc)
         t2 = b + d
-        if t2 >= 0
+        if t2 ≥ 0
             t1 = b - d
             return t1 > 0 ? (t1, t2) : (Inf, t2)
         end
@@ -86,7 +86,7 @@ end
 
 Find the shortest point of intersection that is within the ellipsoid's dome and reassign the origin of the ray. Returns failure of the intersection.
 """
-function advance!(r::Ray, s::Ellipsoid)::Bool
+function advance!(r::Ray, s::Ellipsoid)
     # move the ray's origin to the intersection point that is within the ellipsoid's dome, and return failure
     orig = s.center_scale(r.orig) # transform the ray's origin according to the ellipsoid
     dir = normalize(s.scale(r.dir)) # scale the ray's direction as well
@@ -111,10 +111,10 @@ end
 Build an optical interface from a AffineMap that transforms a point on the ellipsoid of the interface to the normal at that point, `normal`, and the refractive index ratio between the inside and the outside of the ellipsoid, `n`.
 """
 struct Interface
-    normal::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}}
+    normal::AffineMap{SDiagonal{3, Float64}, SVector{3,Float64}}
     n::Float64
     n2::Float64
-    Interface(normal::AffineMap{SArray{Tuple{3,3},Float64,2,9},SVector{3,Float64}}, n::Float64) = new(normal, n, n^2)
+    Interface(normal::AffineMap{SDiagonal{3,Float64},SVector{3,Float64}}, n::Float64) = new(normal, n, n^2)
 end
 
 """
@@ -136,8 +136,8 @@ end
 Convenience function to build optical units. Build an optical unit depending on if the normal should be pointing in or out, `pointin`. The correct AffineMap transformation will be automatically calculated.
 """
 function OpticUnit(body::Ellipsoid, pointin::Bool, n::Float64, register::Bool, name::String)
-    i = Float64((-1)^pointin)
-    dir = LinearMap(@SMatrix([i 0 0; 0 i 0; 0 0 i]))
+    i = ifelse(pointin, -1.0, 1.0)
+    dir = LinearMap(SDiagonal{3, Float64}(i, i, i))
     normal = dir∘body.scale∘body.scale∘body.center
     interface = Interface(normal, n)
     return OpticUnit(body, interface, register, name)
@@ -149,14 +149,16 @@ end
 
 Refract or reflect a ray with an interface. Update the direction of the ray. Returns if event failed, which is always `false` (see `raytrace!` for details why that is so).
 """
-function bend!(r::Ray, i::Interface)::Bool
+function bend!(r::Ray, i::Interface)
     i.n == 1 && return false # we're done cause the refractive indices are the same
     N = normalize(i.normal(r.orig))
     a = -r.dir⋅N
     b = i.n2*(1 - a^2)
-    dir = b <= 1 ? # refract or reflect?
-        i.n*r.dir + (i.n*a - sqrt(1 - b))*N : # refract
-        r.dir + 2a*N # reflect
+    dir = if b ≤ 1 # refract or reflect? refract!
+        i.n*r.dir + (i.n*a - sqrt(1 - b))*N
+    else # reflect!
+        r.dir + 2a*N
+    end
     r.dir = normalize(dir)
     return false
 end
